@@ -251,7 +251,7 @@ const TitleCard: React.FC = () => {
           StarCraft
         </div>
         <div style={{ fontFamily: "monospace", fontSize: 18, color: "rgba(255,255,255,0.3)", marginTop: 24, opacity: subSpring }}>
-          by @tonyyont
+          peon-ping
         </div>
       </div>
     </AbsoluteFill>
