@@ -2,28 +2,29 @@
 
 ![macOS](https://img.shields.io/badge/macOS-blue) ![WSL2](https://img.shields.io/badge/WSL2-blue) ![Linux](https://img.shields.io/badge/Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Claude Code](https://img.shields.io/badge/Claude_Code-hook-ffab01)
+![Claude Code](https://img.shields.io/badge/Claude_Code-hook-ffab01) ![Codex](https://img.shields.io/badge/Codex-adapter-ffab01) ![Cursor](https://img.shields.io/badge/Cursor-adapter-ffab01) ![OpenCode](https://img.shields.io/badge/OpenCode-adapter-ffab01)
 
-**Your Peon pings you when Claude Code needs attention.**
+**Game character voice lines when your AI coding agent needs attention.**
 
-Claude Code doesn't notify you when it finishes or needs permission. You tab away, lose focus, and waste 15 minutes getting back into flow. peon-ping fixes this with Warcraft III Peon voice lines — so you never miss a beat, and your terminal sounds like Orgrimmar.
+AI coding agents don't notify you when they finish or need permission. You tab away, lose focus, and waste 15 minutes getting back into flow. peon-ping fixes this with voice lines from Warcraft, StarCraft, Portal, Zelda, and more — works with **Claude Code**, **Codex**, **Cursor**, and **OpenCode**.
 
 **See it in action** &rarr; [peonping.com](https://peonping.com/)
 
 ## Install
 
 ```bash
+brew install PeonPing/tap/peon-ping
+```
+
+Then run `peon-ping-setup` to register hooks and download sound packs. macOS and Linux.
+
+**Or install via curl** (macOS, Linux, WSL2):
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash
 ```
 
-One command. Takes 10 seconds. macOS, WSL2 (Windows), and Linux. Re-run to update (sounds and config preserved). Installs 10 curated English packs by default.
-
-**Or install via Homebrew** (macOS/Linux):
-
-```bash
-brew install PeonPing/tap/peon-ping
-peon-ping-setup
-```
+One command. Takes 10 seconds. Re-run to update (sounds and config preserved). Installs 10 curated English packs by default.
 
 **Install all packs** (every language and franchise):
 
