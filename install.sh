@@ -14,7 +14,7 @@ done
 if [ "$LOCAL_MODE" = true ]; then
   BASE_DIR="$PWD/.claude"
 else
-  BASE_DIR="$HOME/.claude"
+  BASE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 fi
 INSTALL_DIR="$BASE_DIR/hooks/peon-ping"
 SETTINGS="$BASE_DIR/settings.json"
@@ -103,7 +103,7 @@ if [ ! -d "$BASE_DIR" ]; then
   if [ "$LOCAL_MODE" = true ]; then
     echo "Error: .claude/ not found in current directory. Is this a Claude Code project?"
   else
-    echo "Error: ~/.claude/ not found. Is Claude Code installed?"
+    echo "Error: $BASE_DIR not found. Is Claude Code installed?"
   fi
   exit 1
 fi
@@ -175,18 +175,18 @@ mkdir -p "$SKILL_DIR"
 if [ "$LOCAL_MODE" = true ]; then
   SKILL_HOOK_CMD="bash .claude/hooks/peon-ping/peon.sh"
 else
-  SKILL_HOOK_CMD="bash ~/.claude/hooks/peon-ping/peon.sh"
+  SKILL_HOOK_CMD="bash $INSTALL_DIR/peon.sh"
 fi
 if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR/skills/peon-ping-toggle" ]; then
   cp "$SCRIPT_DIR/skills/peon-ping-toggle/SKILL.md" "$SKILL_DIR/"
   if [ "$LOCAL_MODE" = true ]; then
-    sed -i.bak 's|bash ~/.claude/hooks/peon-ping/peon.sh|'"$SKILL_HOOK_CMD"'|g' "$SKILL_DIR/SKILL.md"
+    sed -i.bak 's|bash "${CLAUDE_CONFIG_DIR:-\$HOME/\.claude}"/hooks/peon-ping/peon\.sh|'"$SKILL_HOOK_CMD"'|g' "$SKILL_DIR/SKILL.md"
     rm -f "$SKILL_DIR/SKILL.md.bak"
   fi
 elif [ -z "$SCRIPT_DIR" ]; then
   curl -fsSL "$REPO_BASE/skills/peon-ping-toggle/SKILL.md" -o "$SKILL_DIR/SKILL.md"
   if [ "$LOCAL_MODE" = true ]; then
-    sed -i.bak 's|bash ~/.claude/hooks/peon-ping/peon.sh|'"$SKILL_HOOK_CMD"'|g' "$SKILL_DIR/SKILL.md"
+    sed -i.bak 's|bash "${CLAUDE_CONFIG_DIR:-\$HOME/\.claude}"/hooks/peon-ping/peon\.sh|'"$SKILL_HOOK_CMD"'|g' "$SKILL_DIR/SKILL.md"
     rm -f "$SKILL_DIR/SKILL.md.bak"
   fi
 else
@@ -195,7 +195,7 @@ fi
 
 # --- Add shell alias (global install only) ---
 if [ "$LOCAL_MODE" = false ]; then
-  ALIAS_LINE='alias peon="bash ~/.claude/hooks/peon-ping/peon.sh"'
+  ALIAS_LINE="alias peon=\"bash $INSTALL_DIR/peon.sh\""
   for rcfile in "$HOME/.zshrc" "$HOME/.bashrc"; do
     if [ -f "$rcfile" ] && ! grep -qF 'alias peon=' "$rcfile"; then
       echo "" >> "$rcfile"
@@ -206,7 +206,7 @@ if [ "$LOCAL_MODE" = false ]; then
   done
 
   # --- Add tab completion ---
-  COMPLETION_LINE='[ -f ~/.claude/hooks/peon-ping/completions.bash ] && source ~/.claude/hooks/peon-ping/completions.bash'
+  COMPLETION_LINE="[ -f $INSTALL_DIR/completions.bash ] && source $INSTALL_DIR/completions.bash"
   for rcfile in "$HOME/.zshrc" "$HOME/.bashrc"; do
     if [ -f "$rcfile" ] && ! grep -qF 'peon-ping/completions.bash' "$rcfile"; then
       echo "$COMPLETION_LINE" >> "$rcfile"
@@ -218,7 +218,7 @@ fi
 # --- Add fish shell function + completions ---
 FISH_CONFIG="$HOME/.config/fish/config.fish"
 if [ -f "$FISH_CONFIG" ]; then
-  FISH_FUNC='function peon; bash ~/.claude/hooks/peon-ping/peon.sh $argv; end'
+  FISH_FUNC="function peon; bash $INSTALL_DIR/peon.sh \$argv; end"
   if ! grep -qF 'function peon' "$FISH_CONFIG"; then
     echo "" >> "$FISH_CONFIG"
     echo "# peon-ping quick controls" >> "$FISH_CONFIG"
@@ -247,7 +247,7 @@ done
 
 # --- Backup existing notify.sh (global fresh install only) ---
 if [ "$LOCAL_MODE" = false ] && [ "$UPDATING" = false ]; then
-  NOTIFY_SH="$HOME/.claude/hooks/notify.sh"
+  NOTIFY_SH="$BASE_DIR/hooks/notify.sh"
   if [ -f "$NOTIFY_SH" ]; then
     cp "$NOTIFY_SH" "$NOTIFY_SH.backup"
     echo ""
@@ -262,7 +262,7 @@ echo "Updating Claude Code hooks in settings.json..."
 if [ "$LOCAL_MODE" = true ]; then
   HOOK_CMD=".claude/hooks/peon-ping/peon.sh"
 else
-  HOOK_CMD="$HOME/.claude/hooks/peon-ping/peon.sh"
+  HOOK_CMD="$INSTALL_DIR/peon.sh"
 fi
 
 python3 -c "

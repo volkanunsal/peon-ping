@@ -63,7 +63,7 @@ Pausing mutes sounds and desktop notifications instantly. Persists across sessio
 
 ## Configuration
 
-Edit `~/.claude/hooks/peon-ping/config.json`:
+Edit `$CLAUDE_CONFIG_DIR/hooks/peon-ping/config.json` (default: `~/.claude/hooks/peon-ping/config.json`):
 
 ```json
 {
@@ -127,7 +127,7 @@ Want to add your own pack? See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Uninstall
 
 ```bash
-bash ~/.claude/hooks/peon-ping/uninstall.sh        # global
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/hooks/peon-ping/uninstall.sh        # global
 bash .claude/hooks/peon-ping/uninstall.sh           # project-local
 ```
 
