@@ -191,9 +191,13 @@ def play_sound_on_host(path, volume):
 def send_notification_on_host(title, message, color="red"):
     """Send a desktop notification using the host's native notification system."""
     if HOST_PLATFORM == "mac":
+        # Pass title/message as arguments to avoid AppleScript injection
         subprocess.Popen(
             ["osascript", "-e",
-             f'display notification "{message}" with title "{title}"'],
+             'on run argv\n'
+             '  display notification (item 1 of argv) with title (item 2 of argv)\n'
+             'end run',
+             "--", message, title],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
     elif HOST_PLATFORM == "linux":
