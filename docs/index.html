@@ -722,6 +722,102 @@ a:hover { text-decoration: underline; }
   font-size: 0.82rem;
 }
 
+/* --- Install toggle --- */
+.picker-install-toggle {
+  display: inline-flex;
+  border: 1px solid var(--wc3-card-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.picker-install-toggle button {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 4px 14px;
+  background: var(--wc3-card-bg);
+  color: var(--wc3-text-dim);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.picker-install-toggle button.active {
+  background: rgba(var(--wc3-gold-rgb), 0.15);
+  color: var(--wc3-gold);
+}
+.picker-install-toggle button:hover:not(.active) {
+  color: var(--wc3-text-bright);
+}
+
+/* --- Expand-to-preview --- */
+.picker-card.expanded {
+  grid-column: 1 / -1;
+  border-color: var(--wc3-gold);
+}
+.picker-card-expand-area {
+  display: none;
+}
+.picker-card.expanded .picker-card-expand-area {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--wc3-card-border);
+}
+.picker-expand-desc {
+  font-size: 0.78rem;
+  color: var(--wc3-text-muted);
+  margin-bottom: 10px;
+}
+.picker-expand-category {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--wc3-gold);
+  text-transform: uppercase;
+  margin: 10px 0 6px;
+  letter-spacing: 0.5px;
+}
+.picker-expand-category:first-child {
+  margin-top: 0;
+}
+.picker-expand-sounds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+}
+.picker-expand-sound {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--wc3-text-muted);
+  text-align: left;
+}
+.picker-expand-sound:hover {
+  background: rgba(var(--wc3-gold-rgb), 0.08);
+  border-color: rgba(var(--wc3-gold-rgb), 0.2);
+  color: var(--wc3-text-bright);
+}
+.picker-expand-sound.playing {
+  background: rgba(var(--wc3-gold-rgb), 0.15);
+  border-color: var(--wc3-gold);
+  color: var(--wc3-gold);
+}
+.picker-expand-sound-icon {
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}
+.picker-expand-sound-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- Features strip (accent stripe) --- */
 .features-grid {
   display: grid;
@@ -821,7 +917,7 @@ footer a:hover { color: var(--wc3-gold); }
     display: none;
   }
   .atmosphere-orb { width: 600px; height: 600px; }
-  .picker-grid { grid-template-columns: repeat(2, 1fr); max-height: 360px; }
+  .picker-grid { grid-template-columns: 1fr; max-height: 360px; }
 }
 
 /* --- Scrollbar & Selection --- */
@@ -1383,14 +1479,16 @@ html { scrollbar-width: thin; scrollbar-color: var(--wc3-card-border) var(--wc3-
   <h2 class="section-title">Pick your packs</h2>
   <p class="section-desc">Select the sound packs you want. Your custom install command updates live.</p>
 
+  <input type="text" class="picker-search" id="pickerSearch" placeholder="Search packs..." autocomplete="off">
+
   <div class="picker-filters">
-    <button class="picker-filter active" data-lang="all">All</button>
-    <button class="picker-filter" data-lang="en">English</button>
+    <button class="picker-filter active" data-lang="en">English</button>
     <button class="picker-filter" data-lang="ru">Russian</button>
     <button class="picker-filter" data-lang="es">Spanish</button>
     <button class="picker-filter" data-lang="fr">French</button>
     <button class="picker-filter" data-lang="cs">Czech</button>
     <button class="picker-filter" data-lang="other">Other</button>
+    <button class="picker-filter" data-lang="all">All</button>
   </div>
 
   <div class="picker-grid" id="pickerGrid">
@@ -1405,6 +1503,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--wc3-card-border) var(--wc3-
   </div>
 
   <div class="picker-command">
+    <div class="picker-install-toggle">
+      <button class="active" data-mode="curl">curl</button>
+      <button data-mode="brew">brew</button>
+    </div>
     <div class="install-block" onclick="copyInstall(this)" title="Click to copy" role="button" aria-label="Copy custom install command">
       <code id="pickerCommandCode">curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash</code>
       <button class="copy-btn" aria-label="Copy to clipboard"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V2.5A1.5 1.5 0 014.5 1H10"/></svg></button>
@@ -1697,55 +1799,149 @@ let registryPacks = [];
 let selectedPacks = new Set(DEFAULT_PACKS);
 let pickerAudio = null;
 let pickerPlayingBtn = null;
-let activeFilter = 'all';
+let activeFilter = 'en';
+let searchQuery = '';
+let installMode = 'curl';
+let manifestCache = {};
+let expandedPack = null;
+let expandAudio = null;
+let expandPlayingEl = null;
 
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// --- Shareable URLs ---
+function updateHash() {
+  if (setsEqual(selectedPacks, DEFAULT_PACKS)) {
+    if (window.location.hash.startsWith('#packs=')) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+    return;
+  }
+  if (selectedPacks.size === 0) {
+    history.replaceState(null, '', '#packs=none');
+    return;
+  }
+  history.replaceState(null, '', '#packs=' + Array.from(selectedPacks).sort().join(','));
+}
+
+function parseHashPacks() {
+  var hash = window.location.hash;
+  if (!hash.startsWith('#packs=')) return null;
+  var val = hash.substring(7);
+  if (val === 'none') return new Set();
+  if (val === 'all') return 'all';
+  return new Set(val.split(',').filter(Boolean));
+}
+
+// --- Registry load ---
 async function loadRegistry() {
   try {
     const resp = await fetch(REGISTRY_URL);
     const data = await resp.json();
     registryPacks = data.packs || [];
+
+    // Apply URL hash selection if present
+    var hashPacks = parseHashPacks();
+    var validNames = new Set(registryPacks.map(function(p) { return p.name; }));
+    if (hashPacks === 'all') {
+      selectedPacks = new Set(validNames);
+    } else if (hashPacks !== null) {
+      selectedPacks = new Set([...hashPacks].filter(function(n) { return validNames.has(n); }));
+    }
+
     renderPicker();
     updatePickerCommand();
+
+    // Scroll to picker if loaded from a shared URL
+    if (hashPacks !== null) {
+      setTimeout(function() {
+        document.getElementById('picker').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   } catch (e) {
     document.getElementById('pickerGrid').innerHTML = '<div class="picker-loading">Could not load registry. Use the default install command above.</div>';
   }
 }
 
+// --- Render picker grid ---
 function renderPicker() {
   const grid = document.getElementById('pickerGrid');
   grid.innerHTML = '';
   const knownLangs = ['en','ru','es','fr','cs'];
-  const filtered = registryPacks.filter(p => {
+
+  // Language filter
+  var filtered = registryPacks.filter(function(p) {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'other') return !knownLangs.includes(p.language);
     return p.language === activeFilter;
   });
-  filtered.forEach(pack => {
-    const card = document.createElement('div');
-    const sel = selectedPacks.has(pack.name);
-    const isDef = DEFAULT_PACKS.has(pack.name);
-    card.className = 'picker-card' + (sel ? ' selected' : '');
+
+  // Search filter
+  if (searchQuery) {
+    filtered = filtered.filter(function(p) {
+      var hay = [
+        p.display_name, p.name, p.description || '',
+        (p.author && p.author.name) || '',
+        (p.tags || []).join(' ')
+      ].join(' ').toLowerCase();
+      return hay.includes(searchQuery);
+    });
+  }
+
+  // If expanded pack is filtered out, collapse it
+  if (expandedPack && !filtered.find(function(p) { return p.name === expandedPack; })) {
+    stopExpandAudio();
+    expandedPack = null;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="picker-loading">No packs match your search.</div>';
+    return;
+  }
+
+  filtered.forEach(function(pack) {
+    var card = document.createElement('div');
+    var sel = selectedPacks.has(pack.name);
+    var isDef = DEFAULT_PACKS.has(pack.name);
+    var isExpanded = expandedPack === pack.name;
+    card.className = 'picker-card' + (sel ? ' selected' : '') + (isExpanded ? ' expanded' : '');
     card.dataset.pack = pack.name;
-    const sizeKB = Math.round(pack.total_size_bytes / 1024);
-    const langLabel = pack.language ? pack.language.toUpperCase() : 'EN';
+    var langLabel = pack.language ? pack.language.toUpperCase() : 'EN';
     card.innerHTML =
       '<div class="picker-card-top">' +
         '<div class="picker-checkbox">' + (sel ? '\u2713' : '') + '</div>' +
-        '<div class="picker-card-name">' + pack.display_name + '</div>' +
+        '<div class="picker-card-name">' + escapeHtml(pack.display_name) + '</div>' +
       '</div>' +
-      '<div class="picker-card-meta">' + langLabel + ' \u00b7 ' + pack.sound_count + ' sounds \u00b7 ' + sizeKB + ' KB</div>' +
+      '<div class="picker-card-meta">' + langLabel + ' \u00b7 ' + pack.sound_count + ' sounds</div>' +
       '<div class="picker-card-bottom">' +
         (isDef ? '<span class="picker-default-badge">default</span>' : '<span></span>') +
-        (pack.preview_sounds && pack.preview_sounds.length ? '<button class="picker-card-preview" data-pack="' + pack.name + '" aria-label="Preview ' + pack.display_name + '">&#9654;</button>' : '') +
-      '</div>';
+        '<button class="picker-card-preview" data-pack="' + pack.name + '" aria-label="Preview ' + escapeHtml(pack.display_name) + '">&#9654;</button>' +
+      '</div>' +
+      '<div class="picker-card-expand-area" id="expand-' + pack.name + '"></div>';
+
     card.addEventListener('click', function(e) {
       if (e.target.closest('.picker-card-preview')) return;
-      togglePickerPack(pack.name);
+      if (e.target.closest('.picker-expand-sound')) return;
+      if (e.target.closest('.picker-checkbox')) {
+        togglePickerPack(pack.name);
+        return;
+      }
+      toggleExpand(pack.name);
     });
+
     grid.appendChild(card);
+
+    if (isExpanded) {
+      renderExpandedSounds(pack);
+    }
   });
 }
 
+// --- Toggle pack selection ---
 function togglePickerPack(name) {
   if (selectedPacks.has(name)) selectedPacks.delete(name);
   else selectedPacks.add(name);
@@ -1757,19 +1953,33 @@ function togglePickerPack(name) {
   updatePickerCommand();
 }
 
+// --- Update install command ---
 function updatePickerCommand() {
   var code = document.getElementById('pickerCommandCode');
   var count = document.getElementById('pickerCount');
   count.textContent = selectedPacks.size + ' pack' + (selectedPacks.size !== 1 ? 's' : '') + ' selected';
-  var base = 'curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash';
-  if (selectedPacks.size === 0 || setsEqual(selectedPacks, DEFAULT_PACKS)) {
-    code.textContent = base;
-  } else if (selectedPacks.size === registryPacks.length) {
-    code.textContent = base + ' -s -- --all';
+
+  if (installMode === 'brew') {
+    var brew = 'brew install PeonPing/tap/peon-ping && peon-ping-setup';
+    if (selectedPacks.size === 0 || setsEqual(selectedPacks, DEFAULT_PACKS)) {
+      code.textContent = brew;
+    } else if (selectedPacks.size === registryPacks.length) {
+      code.textContent = brew + ' --all';
+    } else {
+      code.textContent = brew + ' --packs=' + Array.from(selectedPacks).sort().join(',');
+    }
   } else {
-    var sorted = Array.from(selectedPacks).sort();
-    code.textContent = base + ' -s -- --packs=' + sorted.join(',');
+    var base = 'curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash';
+    if (selectedPacks.size === 0 || setsEqual(selectedPacks, DEFAULT_PACKS)) {
+      code.textContent = base;
+    } else if (selectedPacks.size === registryPacks.length) {
+      code.textContent = base + ' -s -- --all';
+    } else {
+      code.textContent = base + ' -s -- --packs=' + Array.from(selectedPacks).sort().join(',');
+    }
   }
+
+  updateHash();
 }
 
 function setsEqual(a, b) {
@@ -1778,7 +1988,116 @@ function setsEqual(a, b) {
   return true;
 }
 
-// Preview audio from picker
+// --- Expand-to-preview ---
+function stopExpandAudio() {
+  if (expandAudio) { expandAudio.pause(); expandAudio.currentTime = 0; expandAudio = null; }
+  if (expandPlayingEl) {
+    expandPlayingEl.classList.remove('playing');
+    expandPlayingEl.querySelector('.picker-expand-sound-icon').innerHTML = '&#9654;';
+    expandPlayingEl = null;
+  }
+}
+
+function toggleExpand(packName) {
+  stopExpandAudio();
+  if (expandedPack === packName) {
+    expandedPack = null;
+    renderPicker();
+    return;
+  }
+  expandedPack = packName;
+  renderPicker();
+}
+
+async function renderExpandedSounds(pack) {
+  var area = document.getElementById('expand-' + pack.name);
+  if (!area) return;
+
+  if (manifestCache[pack.name]) {
+    renderManifestSounds(pack, manifestCache[pack.name], area);
+    return;
+  }
+
+  area.innerHTML = '<div class="picker-expand-loading">Loading sounds...</div>';
+  var sp = pack.source_path ? pack.source_path + '/' : '';
+  var url = 'https://raw.githubusercontent.com/' + pack.source_repo + '/' + pack.source_ref + '/' + sp + 'openpeon.json';
+
+  try {
+    var resp = await fetch(url);
+    var manifest = await resp.json();
+    manifestCache[pack.name] = manifest;
+    if (expandedPack === pack.name) {
+      renderManifestSounds(pack, manifest, area);
+    }
+  } catch (e) {
+    area.innerHTML = '<div class="picker-expand-loading">Could not load sounds.</div>';
+  }
+}
+
+function renderManifestSounds(pack, manifest, area) {
+  var html = '';
+  if (pack.description) {
+    html += '<div class="picker-expand-desc">' + escapeHtml(pack.description) + '</div>';
+  }
+  var categories = manifest.categories || {};
+  var sp = pack.source_path ? pack.source_path + '/' : '';
+  var baseUrl = 'https://raw.githubusercontent.com/' + pack.source_repo + '/' + pack.source_ref + '/' + sp;
+
+  for (var catKey in categories) {
+    var cat = categories[catKey];
+    var sounds = cat.sounds || (Array.isArray(cat) ? cat : []);
+    if (!Array.isArray(sounds) || sounds.length === 0) continue;
+
+    html += '<div class="picker-expand-category">' + escapeHtml(catKey) + '</div>';
+    html += '<div class="picker-expand-sounds">';
+    sounds.forEach(function(sound) {
+      var filePath = sound.file || '';
+      var soundUrl = filePath.startsWith('sounds/') ? baseUrl + filePath : baseUrl + 'sounds/' + filePath;
+      html += '<button class="picker-expand-sound" data-src="' + soundUrl + '">' +
+        '<span class="picker-expand-sound-icon">&#9654;</span>' +
+        '<span class="picker-expand-sound-label">' + escapeHtml(sound.label || filePath) + '</span>' +
+      '</button>';
+    });
+    html += '</div>';
+  }
+
+  area.innerHTML = html;
+
+  area.querySelectorAll('.picker-expand-sound').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      playExpandSound(btn);
+    });
+  });
+}
+
+function playExpandSound(btn) {
+  var src = btn.dataset.src;
+  if (expandPlayingEl === btn && expandAudio && !expandAudio.paused) {
+    stopExpandAudio();
+    return;
+  }
+  stopExpandAudio();
+  if (pickerAudio) { pickerAudio.pause(); pickerAudio.currentTime = 0; pickerAudio = null; }
+  if (pickerPlayingBtn) { pickerPlayingBtn.classList.remove('playing'); pickerPlayingBtn.innerHTML = '&#9654;'; pickerPlayingBtn = null; }
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+  if (currentCard) { currentCard.classList.remove('playing'); currentCard.querySelector('.audio-play-icon').innerHTML = '&#9654;'; currentCard = null; }
+  stopPackAudio();
+
+  expandAudio = new Audio(src);
+  expandAudio.play().catch(function(){});
+  btn.classList.add('playing');
+  btn.querySelector('.picker-expand-sound-icon').innerHTML = '&#9632;';
+  expandPlayingEl = btn;
+  expandAudio.addEventListener('ended', function() {
+    btn.classList.remove('playing');
+    btn.querySelector('.picker-expand-sound-icon').innerHTML = '&#9654;';
+    expandAudio = null;
+    expandPlayingEl = null;
+  });
+}
+
+// --- Preview audio from picker (small play button) ---
 document.getElementById('pickerGrid').addEventListener('click', function(e) {
   var previewBtn = e.target.closest('.picker-card-preview');
   if (!previewBtn) return;
@@ -1786,7 +2105,6 @@ document.getElementById('pickerGrid').addEventListener('click', function(e) {
   var packName = previewBtn.dataset.pack;
   var pack = registryPacks.find(function(p) { return p.name === packName; });
   if (!pack || !pack.preview_sounds || !pack.preview_sounds.length) return;
-  // Toggle off if same
   if (pickerPlayingBtn === previewBtn && pickerAudio && !pickerAudio.paused) {
     pickerAudio.pause(); pickerAudio.currentTime = 0;
     previewBtn.classList.remove('playing');
@@ -1794,13 +2112,12 @@ document.getElementById('pickerGrid').addEventListener('click', function(e) {
     pickerAudio = null; pickerPlayingBtn = null;
     return;
   }
-  // Stop any playing
   if (pickerAudio) { pickerAudio.pause(); pickerAudio.currentTime = 0; }
   if (pickerPlayingBtn) { pickerPlayingBtn.classList.remove('playing'); pickerPlayingBtn.innerHTML = '&#9654;'; }
   if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
   if (currentCard) { currentCard.classList.remove('playing'); currentCard.querySelector('.audio-play-icon').innerHTML = '&#9654;'; currentAudio = null; currentCard = null; }
   stopPackAudio();
-  // Build URL
+  stopExpandAudio();
   var soundFile = pack.preview_sounds[0];
   var sp = pack.source_path ? pack.source_path + '/' : '';
   var url = 'https://raw.githubusercontent.com/' + pack.source_repo + '/' + pack.source_ref + '/' + sp + 'sounds/' + soundFile;
@@ -1816,7 +2133,23 @@ document.getElementById('pickerGrid').addEventListener('click', function(e) {
   });
 });
 
-// Filter buttons
+// --- Search input ---
+document.getElementById('pickerSearch').addEventListener('input', function(e) {
+  searchQuery = e.target.value.toLowerCase().trim();
+  renderPicker();
+});
+
+// --- Install mode toggle ---
+document.querySelectorAll('.picker-install-toggle button').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.picker-install-toggle button').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    installMode = btn.dataset.mode;
+    updatePickerCommand();
+  });
+});
+
+// --- Language filter buttons ---
 document.querySelectorAll('.picker-filter').forEach(function(btn) {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.picker-filter').forEach(function(b) { b.classList.remove('active'); });
@@ -1826,7 +2159,7 @@ document.querySelectorAll('.picker-filter').forEach(function(btn) {
   });
 });
 
-// Select all / none / defaults
+// --- Select all / none / defaults ---
 document.getElementById('pickerSelectAll').addEventListener('click', function() {
   selectedPacks = new Set(registryPacks.map(function(p) { return p.name; }));
   renderPicker(); updatePickerCommand();
