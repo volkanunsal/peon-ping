@@ -1,6 +1,6 @@
 # peon-ping
 
-![macOS](https://img.shields.io/badge/macOS-blue) ![WSL2](https://img.shields.io/badge/WSL2-blue) ![Linux](https://img.shields.io/badge/Linux-blue)
+![macOS](https://img.shields.io/badge/macOS-blue) ![WSL2](https://img.shields.io/badge/WSL2-blue) ![Linux](https://img.shields.io/badge/Linux-blue) ![SSH](https://img.shields.io/badge/SSH-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-hook-ffab01) ![Codex](https://img.shields.io/badge/Codex-adapter-ffab01) ![Cursor](https://img.shields.io/badge/Cursor-adapter-ffab01) ![OpenCode](https://img.shields.io/badge/OpenCode-adapter-ffab01)
 
@@ -90,6 +90,11 @@ peon packs next           # Cycle to the next pack
 peon packs remove <p1,p2> # Remove specific packs
 peon notifications on     # Enable desktop notifications
 peon notifications off    # Disable desktop notifications
+peon mobile ntfy <topic>  # Set up phone notifications (free)
+peon mobile off           # Disable phone notifications
+peon mobile test          # Send a test notification
+peon relay --daemon       # Start audio relay (for SSH/devcontainer)
+peon relay --stop         # Stop background relay
 ```
 
 Tab completion is supported — type `peon packs use <TAB>` to see available pack names.
@@ -138,6 +143,76 @@ peon-ping works with any agentic IDE that supports hooks. Adapters translate IDE
 | **Cursor** | Adapter | Add hook entries to `~/.cursor/hooks.json` pointing to `adapters/cursor.sh` |
 | **OpenCode** | Adapter | `curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/adapters/opencode.sh \| bash` |
 
+## Remote development (SSH / Devcontainers / Codespaces)
+
+Coding on a remote server or inside a container? peon-ping auto-detects SSH sessions, devcontainers, and Codespaces, then routes audio and notifications through a lightweight relay running on your local machine.
+
+### SSH setup
+
+1. **On your local machine**, start the relay:
+   ```bash
+   peon relay --daemon
+   ```
+
+2. **SSH with port forwarding**:
+   ```bash
+   ssh -R 19998:localhost:19998 your-server
+   ```
+
+3. **Install peon-ping on the remote** — it auto-detects the SSH session and sends audio requests back through the forwarded port to your local relay.
+
+That's it. Sounds play on your laptop, not the remote server.
+
+### Devcontainers / Codespaces
+
+No port forwarding needed — peon-ping auto-detects `REMOTE_CONTAINERS` and `CODESPACES` environment variables and routes audio to `host.docker.internal:19998`. Just run `peon relay --daemon` on your host machine.
+
+### Relay commands
+
+```bash
+peon relay                # Start relay in foreground
+peon relay --daemon       # Start in background
+peon relay --stop         # Stop background relay
+peon relay --status       # Check if relay is running
+peon relay --port=12345   # Custom port (default: 19998)
+peon relay --bind=0.0.0.0 # Listen on all interfaces (less secure)
+```
+
+Environment variables: `PEON_RELAY_PORT`, `PEON_RELAY_HOST`, `PEON_RELAY_BIND`.
+
+If peon-ping detects an SSH or container session but can't reach the relay, it prints setup instructions on `SessionStart`.
+
+## Mobile notifications
+
+Get push notifications on your phone when tasks finish or need attention — useful when you're away from your desk.
+
+### Quick start (ntfy.sh — free, no account needed)
+
+1. Install the [ntfy app](https://ntfy.sh) on your phone
+2. Subscribe to a unique topic in the app (e.g. `my-peon-notifications`)
+3. Run:
+   ```bash
+   peon mobile ntfy my-peon-notifications
+   ```
+
+Also supports [Pushover](https://pushover.net) and [Telegram](https://core.telegram.org/bots):
+
+```bash
+peon mobile pushover <user_key> <app_token>
+peon mobile telegram <bot_token> <chat_id>
+```
+
+### Mobile commands
+
+```bash
+peon mobile on            # Enable mobile notifications
+peon mobile off           # Disable mobile notifications
+peon mobile status        # Show current config
+peon mobile test          # Send a test notification
+```
+
+Mobile notifications fire on every event regardless of window focus — they're independent from desktop notifications and sounds.
+
 ## Sound packs
 
 43+ packs across Warcraft, StarCraft, Red Alert, Portal, Zelda, Dota 2, Helldivers 2, Elder Scrolls, and more. The default install includes 10 curated English packs:
@@ -179,10 +254,11 @@ bash .claude/hooks/peon-ping/uninstall.sh           # project-local
 - macOS (uses `afplay` and AppleScript), WSL2 (uses PowerShell `MediaPlayer` and WinForms), or Linux (uses `pw-play`/`paplay`/`ffplay`/`mpv`/`aplay` and `notify-send`)
 - Claude Code with hooks support
 - python3
+- For SSH/remote: `curl` on the remote host
 
 ## How it works
 
-`peon.sh` is a Claude Code hook registered for `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, and `PermissionRequest` events. On each event it maps to a CESP sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your Terminal tab title.
+`peon.sh` is a Claude Code hook registered for `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, and `PermissionRequest` events. On each event it maps to a CESP sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your Terminal tab title. In SSH sessions, devcontainers, and Codespaces, audio and notification requests are forwarded over HTTP to a relay server (`relay.sh`) running on your local machine.
 
 Sound packs are downloaded from the [OpenPeon registry](https://github.com/PeonPing/registry) at install time. The official packs are hosted in [PeonPing/og-packs](https://github.com/PeonPing/og-packs). Sound files are property of their respective publishers (Blizzard, Valve, EA, etc.) and are distributed under fair use for personal notification purposes.
 
